@@ -344,7 +344,13 @@ def evaluate_inference(rule: InferenceRule, model: Model) -> bool:
         True
     """
     assert is_model(model)
-    # Task 4.2
+    for assumption in rule.assumptions:
+        assert assumption.variables().issubset(variables(model))
+    assert rule.conclusion.variables().issubset(variables(model))
+    for assumption in rule.assumptions:
+        if not evaluate(assumption, model):
+            return True
+    return evaluate(rule.conclusion, model)
 
 def is_sound_inference(rule: InferenceRule) -> bool:
     """Checks if the given inference rule is sound, i.e., whether its
@@ -356,4 +362,10 @@ def is_sound_inference(rule: InferenceRule) -> bool:
     Returns:
         ``True`` if the given inference rule is sound, ``False`` otherwise.
     """
-    # Task 4.3
+    vs = set(rule.conclusion.variables())
+    for assumption in rule.assumptions:
+        vs |= assumption.variables()
+    for model in all_models(sorted(vs)):
+        if not evaluate_inference(rule, model):
+            return False
+    return True

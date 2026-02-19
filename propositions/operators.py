@@ -22,7 +22,34 @@ def to_not_and_or(formula: Formula) -> Formula:
         contains no constants or operators beyond ``'~'``, ``'&'``, and
         ``'|'``.
     """
-    # Task 3.5
+    if is_variable(formula.root):
+        return formula
+    if is_constant(formula.root):
+        p = Formula('p')
+        if formula.root == 'T':
+            return Formula('|', p, Formula('~', p))
+        return Formula('&', p, Formula('~', p))
+    if is_unary(formula.root):
+        return Formula('~', to_not_and_or(formula.first))
+    a = to_not_and_or(formula.first)
+    b = to_not_and_or(formula.second)
+    if formula.root == '&':
+        return Formula('&', a, b)
+    if formula.root == '|':
+        return Formula('|', a, b)
+    if formula.root == '->':
+        return Formula('|', Formula('~', a), b)
+    if formula.root == '+':
+        return Formula('|', Formula('&', a, Formula('~', b)),
+                       Formula('&', Formula('~', a), b))
+    if formula.root == '<->':
+        return Formula('|', Formula('&', a, b),
+                       Formula('&', Formula('~', a), Formula('~', b)))
+    if formula.root == '-&':
+        return Formula('~', Formula('&', a, b))
+    if formula.root == '-|':
+        return Formula('~', Formula('|', a, b))
+    raise ValueError('Unknown operator: ' + formula.root)
 
 def to_not_and(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
@@ -35,7 +62,19 @@ def to_not_and(formula: Formula) -> Formula:
         A formula that has the same truth table as the given formula, but
         contains no constants or operators beyond ``'~'`` and ``'&'``.
     """
-    # Task 3.6a
+    formula = to_not_and_or(formula)
+    if is_variable(formula.root):
+        return formula
+    if is_unary(formula.root):
+        return Formula('~', to_not_and(formula.first))
+    if formula.root == '&':
+        return Formula('&', to_not_and(formula.first),
+                       to_not_and(formula.second))
+    if formula.root == '|':
+        a = to_not_and(formula.first)
+        b = to_not_and(formula.second)
+        return Formula('~', Formula('&', Formula('~', a), Formula('~', b)))
+    raise ValueError('Unknown operator: ' + formula.root)
 
 def to_nand(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
@@ -48,7 +87,18 @@ def to_nand(formula: Formula) -> Formula:
         A formula that has the same truth table as the given formula, but
         contains no constants or operators beyond ``'-&'``.
     """
-    # Task 3.6b
+    formula = to_not_and(formula)
+    if is_variable(formula.root):
+        return formula
+    if is_unary(formula.root):
+        a = to_nand(formula.first)
+        return Formula('-&', a, a)
+    if formula.root == '&':
+        a = to_nand(formula.first)
+        b = to_nand(formula.second)
+        t = Formula('-&', a, b)
+        return Formula('-&', t, t)
+    raise ValueError('Unknown operator: ' + formula.root)
 
 def to_implies_not(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
@@ -61,7 +111,20 @@ def to_implies_not(formula: Formula) -> Formula:
         A formula that has the same truth table as the given formula, but
         contains no constants or operators beyond ``'->'`` and ``'~'``.
     """
-    # Task 3.6c
+    formula = to_not_and_or(formula)
+    if is_variable(formula.root):
+        return formula
+    if is_unary(formula.root):
+        return Formula('~', to_implies_not(formula.first))
+    if formula.root == '|':
+        a = to_implies_not(formula.first)
+        b = to_implies_not(formula.second)
+        return Formula('->', Formula('~', a), b)
+    if formula.root == '&':
+        a = to_implies_not(formula.first)
+        b = to_implies_not(formula.second)
+        return Formula('~', Formula('->', a, Formula('~', b)))
+    raise ValueError('Unknown operator: ' + formula.root)
 
 def to_implies_false(formula: Formula) -> Formula:
     """Syntactically converts the given formula to an equivalent formula that
@@ -74,4 +137,18 @@ def to_implies_false(formula: Formula) -> Formula:
         A formula that has the same truth table as the given formula, but
         contains no constants or operators beyond ``'->'`` and ``'F'``.
     """
-    # Task 3.6d
+    formula = to_implies_not(formula)
+    if is_variable(formula.root):
+        return formula
+    if is_constant(formula.root):
+        if formula.root == 'F':
+            return formula
+        f = Formula('F')
+        return Formula('->', f, f)
+    if is_unary(formula.root):
+        a = to_implies_false(formula.first)
+        return Formula('->', a, Formula('F'))
+    if formula.root == '->':
+        return Formula('->', to_implies_false(formula.first),
+                       to_implies_false(formula.second))
+    raise ValueError('Unknown operator: ' + formula.root)
